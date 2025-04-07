@@ -1,0 +1,40 @@
+
+Section 3.4 Example. 
+Compound optimal designs search for the completely randomized experiment example.
+
+---------------------------------------------------------------------
+
+There are two main groups of scripts: the ones titled "Figure_<...>.R" and "<...>_main.R"
+
+---------------------------------------------------------------------
+
+1. R scripts titled "Figure_x_<..>.R" are run to generate the corresponding figures in the manuscript, both for the MSE(DP)-optimal desings in Section 3.4 (Fig. 2-4) and MSE(LP)-optimal designs in Appendix A (Fig. 7-9).
+
+The figures and the efficiency tables can be generated from the pre-calculated tables of designs' criteria values (default option), or the search can be run first by calling the corresponding "<...>_main.R" script -- this option is specified within the "Figure<..>" script, the line that runs the script can be just un-commented.
+
+The outputs are saved in the "output/"" folders: figures and tables with criteria and efficiency values.
+
+---------------------------------------------------------------------
+
+2. If it is desirable to change the number of random starts -- this can be done in the "<..>_main.R" script, by changing the variable "Nstarts". 
+
+
+3. Each "<...>_main.R" script creates an output file with all the designs and R workspace, saved in the corresponding folders within the "output/" folder.
+
+
+4. "Figure_10_tau2_sensitivity.R" script evaluates the obtained optimal designs from th pre-saved workspaces () w.r.t. the criteria with different values of \tau^2.
+
+
+---------------------------------------------------------------------
+
+5. The "\functions" folder contains script files with the functions used for search and design evaluation:
+
+
+  "Common.functions.R": functions that are common for all criteria
+  "MSE.D_functions.R": criteria and search functions for the determinant-based criteria
+  "MSE.D_point_functions.R": criteria and search functions for the determinant-based criteria,
+                             with point prior in the MSE component
+  "MSE.L_functions.R": criteria and search functions for the trace-based criteria
+  "Criteria_evaluation.R": functions for design evaluation, all criteria
+
+

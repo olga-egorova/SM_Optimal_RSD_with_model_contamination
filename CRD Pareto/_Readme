@@ -1,0 +1,37 @@
+
+Section 3.4 Example. 
+Pareto frontier search for the completely randomized experiment example.
+
+---------------------------------------------------------------------
+
+"CRD_example_D.Rmd": the main R markdown for setting up, running the Pareto search,
+                     obtaining the designs and their performances, for determinant-based criteria
+
+
+
+"CRD_example_L.Rmd": the main R markdown for setting up, running the Pareto search,
+                     obtaining the designs and their performances, for trace-based criteria
+
+
+---------------------------------------------------------------------
+
+
+1. We have created the output only for the determinant-based criteria, however, the code is there to be run for the trace-based ones as well.
+
+
+2. Number of random starts (Nstarts), tau2 (tau2) can be changed in the "Setting parameters" block of the script file.
+
+
+2. "output\tables" contains tables with design labels and their eficiency values, ordered with respect to different weight allocations.
+
+
+
+The "_summary.xlsx" files have been compiled manually to display a few top designs from each of the weight combinations.
+
+
+---------------------------------------------------------------------
+
+
+\functions: contains script files with the functions used for search and design evaluation
+\output: R workspace files and tables with design properties generated in the main script
+

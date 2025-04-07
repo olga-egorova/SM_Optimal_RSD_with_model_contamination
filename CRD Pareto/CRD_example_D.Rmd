@@ -1,0 +1,199 @@
+---
+title: "Pareto design search for the CRD example, MSE(DP)-criteria"
+output: html_notebook
+---
+
+
+```{r}
+library(data.table)
+rm(list = ls())
+```
+
+Functions: criteria and search functions
+```{r}
+source("functions/label.R")
+source("functions/transform.R")
+source("functions/candidate_set_full.R")
+
+source("functions/pareto_criteria.R")
+source("functions/pareto_search_functions.R")
+```
+
+Specify parameters of the experiment
+
+```{r}
+K = 5
+Levels = list(1:3,1:3,1:3,1:3,1:3) 
+
+cand.full.extended = candidate_set_full(cand.trt = candidate_trt_set(Levels, K), K)
+
+#cand.full.extended[,1:22]
+#cand.full.extended[,23:52]
+
+P = 21
+Q = 30
+Nruns = 40   
+```
+
+Specify the parameters of the search. Nstarts, tau2, crit.optim values can be changed here.
+
+```{r}
+Nstarts = 3000
+Biter = 500
+alpha.DP = alpha.LoF = 0.05;
+
+# Primary terms - full quadratic model, potential - QxL and LxLxL terms
+cand.full = as.matrix(cand.full.extended[,1:(P+Q+1)])
+
+tau2 = 1.0;        # tau2 = 1./Q
+tau = sqrt(tau2)
+
+# The best values of the three criteria -- obtained by single-objective optimization
+
+crit.optim.1 <- c(0.122345460847515, 0.91010855414354, 0.0708741416229358)  # tau2 = 1
+crit.optim.Q <- c(0.122345460847515, 0.0661161510837583, 0.0599192183231724)  # tau2 = 1/Q
+
+crit.optim = crit.optim.1  # change to crit.optim.Q for tau2 = 1/q
+
+seeds = 145307     # seeds = 130787 for tau2 = 1/q
+
+save.image("output/CRD_setup_D.RData")
+
+```
+
+
+```{r}
+## There is a function that performs the search as below
+#PF1 = Search.pareto(cand.full)
+```
+
+Search -- but in the global environment
+
+```{r}
+cand.full = as.matrix(cand.full)
+set.seed(seeds)
+  list.nd = list()
+   beta_q = matrix(rnorm(Biter*Q, mean=0, sd=tau),  
+                  ncol = Biter)    # to be amended if not iid
+  
+  start_time = Sys.time()
+  for (k in 1:Nstarts)
+  {
+    paste("Current iteration:", k, sep = " ")
+    initial = initial.full(cand.full)
+    Labels = initial$Labels
+    Xp = initial$Xp; Xq = initial$Xq
+    if (k==1) 
+    {
+      pareto.opt = pareto_criteria(Labels, Xp, Xq, beta_q)
+      # initiate the set of non-dominant designs and criteria values
+      list.nd = update.nd_list(list.nd, Labels = Labels, p.crit = pareto.opt)$l
+    }
+    s = 1
+    while (s==1)
+    {
+      Xs = pareto.swap.full(Labels, Xp, Xq, cand.full, list.nd)
+      Labels = Xs$Labels; Xp = Xs$Xp; Xq = Xs$Xq;
+      list.nd = Xs$list.nd
+      s = Xs$search
+      paste("Number of designs =", length(list.nd), sep = " ")
+    }
+  }
+  finish_time = Sys.time()
+  time = finish_time - start_time
+  
+  list.designs = list()
+  for (l in 1:length(list.nd)){
+
+        list.designs = append(list.designs, list(append(list.nd[[l]], 
+                                                    list(X.full = cand.full[list.nd[[l]]$labels,]))))
+  }
+```
+
+```{r}
+save.image("output/CRD_D_1_result.RData")
+```
+
+```{r}
+load("output/CRD_D_1_result.RData")
+```
+
+Look at the criteria values of the designs -- store them in the dt_coords dataset
+
+```{r}
+dt_coords = data.frame(matrix(0, ncol = 4, nrow = length(list.designs)), 
+                       row.names = 1:length(list.designs)); colnames(dt_coords) = c("DP", "LoF", "MSE", "df")
+
+for (l in 1:length(list.designs)) {
+  dt_coords[l,] = c(list.designs[[l]]$p.crit$values$DP, 
+                    list.designs[[l]]$p.crit$values$LoF_DP, 
+                    list.designs[[l]]$p.crit$values$mse,
+                    Nruns - nlevels(as.factor(list.nd[[l]]$labels)))
+}
+dt_coords
+
+dt_coords$label <- 1:nrow(dt_coords)
+dt_coords[order(dt_coords$DP),]
+dt_coords[order(dt_coords$LoF),]
+dt_coords[order(dt_coords$MSE),]
+
+```
+
+Designs' efficiency values with respect to individual criteria
+
+```{r}
+nc <- ncol(dt_coords)
+dt_coords[, nc+(1:3)] <- t(apply(dt_coords[,1:3], 1, function(x) crit.optim/x))
+names(dt_coords)[nc+(1:3)] <- c("DP", "LoF(DP)", "MSE(D)")
+dt_coords
+
+```
+
+Choose some designs -- using the weights
+
+```{r}
+m.kappa <- matrix(c(0.5, 0.5, 0,
+                   0.5, 0, 0.5,
+                   0, 0.5, 0.5,
+                   rep(1./3, 3),
+                   0.5, 0.25, 0.25,
+                   0.25, 0.5, 0.25,
+                   0.25, 0.25, 0.5,
+                   2./3, 0.0, 1./3,
+                   2./3, 1./3, 0.0, 
+                   1./3, 0.0, 2./3,
+                   1./3, 2./3, 0.0),
+                 ncol = 3, byrow = TRUE)
+```
+
+
+dt_w contains compound criteria values of the designs, with the weights from m.kappa:
+
+```{r}
+ncoords = ncol(dt_coords)
+dt_w = dt_coords
+
+for (k in 1:(nrow(m.kappa))) {   
+  
+  dt_w[,ncoords + k] <- apply(as.matrix(dt_w[,ncoords - (2:0)]), 1, function(x) prod(x^m.kappa[k,]))
+  colnames(dt_w)[ncoords + k] <- paste0("weighted_",k)
+
+  }
+
+print(dt_w)
+
+```
+
+Output: each .csv contains a table with designs (design labels) and their component criteria efficiency values, ordered by their performance w.r.t. to the weights allocation. 
+In total -- 11 output files for each value of $\tau^2$.
+
+```{r}
+for (k in 1:(nrow(m.kappa))) {
+  
+  print(dt_w[order(-dt_w[, ncoords+k]),])
+  write.csv(data.table(dt_w[order(-dt_w[, ncoords+k]),]),
+            paste0("output/tables/MSED_designs_weighted_", k, ".csv"))
+  
+}
+```
+
